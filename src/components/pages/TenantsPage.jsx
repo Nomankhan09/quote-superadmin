@@ -16,24 +16,42 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { ToastContainer } from '@/components/ui'
+import { getApps, getUsers } from '../../services/api'
 
 // ── ADD TENANT FORM ───────────────────────────────────────
 function AddTenantModal({ open, onClose, plans, onSuccess, toast }) {
   const [form, setForm] = useState({
-    name:'', email:'', phone:'', plan_id:'',
-    first_name:'', last_name:'', password:''
+    name: '', email: '', phone: '', plan_id: '', app_id: '', user_type: 'new',
+    user_id: '',
+    first_name: '', last_name: '', password: ''
   })
   const [loading, setLoading] = useState(false)
-  const [errors, setErrors]   = useState({})
+  const [errors, setErrors] = useState({})
+  const [apps, setApps] = useState([])
+  const [users, setUsers] = useState([])
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
   const validate = () => {
     const e = {}
-    if (!form.name)       e.name = 'Required'
-    if (!form.email)      e.email = 'Required'
-    if (!form.plan_id)    e.plan_id = 'Select a plan'
-    if (!form.first_name) e.first_name = 'Required'
-    if (!form.password || form.password.length < 8) e.password = 'Min 8 characters'
+
+    if (!form.name) e.name = 'Required'
+    if (!form.app_id) e.app_id = 'Required'
+    if (!form.plan_id) e.plan_id = 'Select a plan'
+    if (!form.db_name) e.db_name = 'Required'
+    if (!form.db_username) e.db_username = 'Required'
+
+    // Only validate user fields for NEW user
+    if (!form.user_id) {
+      if (!form.email) e.email = 'Required'
+      if (!form.first_name) e.first_name = 'Required'
+
+      if (!form.password) {
+        e.password = 'Required'
+      } else if (form.password.length < 8) {
+        e.password = 'Min 8 characters'
+      }
+    }
+
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -43,44 +61,295 @@ function AddTenantModal({ open, onClose, plans, onSuccess, toast }) {
     if (!validate()) return
     setLoading(true)
     try {
-      await createTenant({ ...form, plan_id: Number(form.plan_id) })
+      await createTenant({
+        ...form,
+        plan_id: Number(form.plan_id),
+        app_id: Number(form.app_id)
+      })
       toast({ title: 'Tenant created!', description: `${form.name} is now live.` })
-      setForm({ name:'', email:'', phone:'', plan_id:'', first_name:'', last_name:'', password:'' })
+      setForm({
+        name: '',
+        email: '',
+        phone: '',
+        plan_id: '',
+        first_name: '',
+        last_name: '',
+        password: '',
+
+        // database
+        db_name: '',
+        db_username: '',
+        db_password: '',
+
+        // company
+        company_name: '',
+        company_address: '',
+        zip_code: '',
+        company_email: '',
+        company_phone: '',
+        website: '',
+        company_type: '',
+        pdf_file_name_format: '',
+        gst_number: '',
+
+        // bank
+        bank_name: '',
+        account_number: '',
+        ifsc_code: '',
+        account_holder_name: '',
+        swift_code: '',
+      })
       onSuccess()
     } catch (err) {
       toast({ title: 'Failed', description: err.response?.data?.message || 'Something went wrong', variant: 'destructive' })
     } finally { setLoading(false) }
   }
 
+  const load = useCallback(() => {
+    setLoading(true)
+    Promise.all([getApps(), getUsers()])
+      .then(([ad, users]) => {
+        setApps(ad.data.apps || [])
+        setUsers(users.data?.users || [])
+      })
+      .catch((err) => {
+        console.log('Failed apps', err);
+        toast({ title: 'Failed to load', variant: 'destructive' })
+      }
+      ).finally(() => setLoading(false))
+  }, [])
+
+
+  useEffect(() => {
+    load();
+  }, [load])
+
   return (
-    <Modal open={open} onClose={onClose} title="➕ Add New Tenant" size="lg">
+    <Modal open={open} onClose={onClose} title="➕ Add New Tenant" size="xl">
       <form onSubmit={submit} className="space-y-4">
         <Input label="Business Name" placeholder="e.g. Mehta Interiors"
           value={form.name} onChange={set('name')} error={errors.name} />
 
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="First Name" placeholder="Owner first name"
-            value={form.first_name} onChange={set('first_name')} error={errors.first_name} />
-          <Input label="Last Name" placeholder="Last name"
-            value={form.last_name} onChange={set('last_name')} />
+        <div className="border-t border-border pt-4">
+          <h3 className="font-semibold text-base mb-3">
+            User Details
+          </h3>
+
+          <Select
+            label="User Type"
+            value={form.user_type}
+            onChange={set('user_type')}
+          >
+            <option value="new">New User</option>
+            <option value="existing">Existing User</option>
+          </Select>
+
+          {form.user_type === 'existing' ? (
+            <div className="mt-3">
+              <Select
+                label="Select User"
+                value={form.user_id}
+                onChange={set('user_id')}
+                error={errors.user_id}
+              >
+                <option value="">Select user</option>
+                {users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${user.is_active ? "bg-green-500" : "bg-yellow-500"
+                          }`}
+                        title={user.is_active ? "Active" : "Inactive"}
+                      />
+                      <span>{user.email}</span>
+                    </div>
+                  </option>
+                ))}
+
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <Input
+                  label="First Name"
+                  value={form.first_name}
+                  onChange={set('first_name')}
+                  error={errors.first_name}
+                />
+
+                <Input
+                  label="Last Name"
+                  value={form.last_name}
+                  onChange={set('last_name')}
+                  error={errors.last_name}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <Input
+                  label="Email"
+                  type="email"
+                  value={form.email}
+                  onChange={set('email')}
+                  error={errors.email}
+                />
+
+                <Input
+                  label="Phone"
+                  value={form.phone}
+                  onChange={set('phone')}
+                />
+              </div>
+
+              <Input
+                label="Password"
+                type="password"
+                value={form.password}
+                onChange={set('password')}
+                error={errors.password}
+              />
+            </>
+          )}
         </div>
 
-        <Input label="Email" type="email" placeholder="owner@business.com"
-          value={form.email} onChange={set('email')} error={errors.email} />
-
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Phone" placeholder="9876543210"
-            value={form.phone} onChange={set('phone')} />
           <Select label="Plan" value={form.plan_id} onChange={set('plan_id')} error={errors.plan_id}>
             <option value="">Select plan</option>
             {plans.map(p => (
               <option key={p.id} value={p.id}>{p.name} — ₹{Number(p.price).toLocaleString()}/mo</option>
             ))}
           </Select>
+
+          <Select
+            label="App"
+            value={form.app_id}
+            onChange={set('app_id')}
+            error={errors.app_id}
+          >
+            <option value="">Select app</option>
+
+            {apps.map(a => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </Select>
         </div>
 
-        <Input label="Password" type="password" placeholder="Min 8 characters"
-          value={form.password} onChange={set('password')} error={errors.password} />
+        <div>
+          
+        </div>
+
+        {/* DATABASE DETAILS */}
+
+        <div className="border-t border-border pt-4">
+          <h3 className="font-semibold text-base mb-3">
+            Database Details
+          </h3>
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
+
+            <Input
+              label="Database Name"
+              placeholder="tenant_company"
+              value={form.db_name}
+              onChange={set('db_name')}
+              error={errors.db_name}
+            />
+
+            <Input
+              label="Database Username"
+              placeholder="tenant_user"
+              value={form.db_username}
+              onChange={set('db_username')}
+              error={errors.db_username}
+            />
+
+          </div>
+
+          <Input
+            label="Database Password"
+            type="password"
+            placeholder="Strong DB password"
+            value={form.db_password}
+            onChange={set('db_password')}
+            error={errors.db_password}
+          />
+        </div>
+
+        {/* COMPANY DETAILS */}
+
+        <div className="border-t border-border pt-4">
+          <h3 className="font-semibold text-base mb-3">
+            Company Details
+          </h3>
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
+
+            <Input
+              label="Company Name"
+              value={form.company_name}
+              onChange={set('company_name')}
+            />
+
+            <Input
+              label="Company Email"
+              value={form.company_email}
+              onChange={set('company_email')}
+            />
+
+          </div>
+
+          <Input
+            label="Company Address"
+            value={form.company_address}
+            onChange={set('company_address')}
+            className="mb-3"
+          />
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
+
+            <Input
+              label="ZIP Code"
+              value={form.zip_code}
+              onChange={set('zip_code')}
+            />
+
+            <Input
+              label="Company Phone"
+              value={form.company_phone}
+              onChange={set('company_phone')}
+            />
+
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
+
+            <Input
+              label="Website"
+              value={form.website}
+              onChange={set('website')}
+            />
+
+            <Input
+              label="Company Type"
+              value={form.company_type}
+              onChange={set('company_type')}
+            />
+
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+
+            <Input
+              label="GST Number"
+              value={form.gst_number}
+              onChange={set('gst_number')}
+            />
+
+          </div>
+        </div>
 
         <div className="flex gap-3 justify-end pt-2 border-t border-border">
           <Button variant="ghost" type="button" onClick={onClose}>Cancel</Button>
@@ -95,16 +364,16 @@ function AddTenantModal({ open, onClose, plans, onSuccess, toast }) {
 function TenantDetailModal({ open, onClose, tenant }) {
   if (!tenant) return null
   const fields = [
-    { icon: Mail,     label: 'Email',      val: tenant.email },
-    { icon: Phone,    label: 'Phone',      val: tenant.phone || '—' },
-    { icon: Database, label: 'Database',   val: tenant.db_name },
+    { icon: Mail, label: 'Email', val: tenant.email },
+    { icon: Phone, label: 'Phone', val: tenant.phone || '—' },
+    { icon: Database, label: 'Database', val: tenant.db_name },
     { icon: Calendar, label: 'Trial Ends', val: formatDate(tenant.trial_ends_at) },
-    { icon: Calendar, label: 'Created',    val: formatDate(tenant.created_at) },
+    { icon: Calendar, label: 'Created', val: formatDate(tenant.created_at) },
   ]
   return (
     <Modal open={open} onClose={onClose} size="md">
       <div className="flex items-start gap-4 mb-5">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-accent2 flex items-center justify-center font-display font-bold text-xl text-white shrink-0">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center font-bold text-xl text-white shrink-0 shadow-md shadow-blue-200/40">
           {tenant.name?.charAt(0)}
         </div>
         <div>
@@ -113,12 +382,12 @@ function TenantDetailModal({ open, onClose, tenant }) {
           <span className="ml-2 text-xs text-accent font-semibold">{tenant.plan?.name}</span>
         </div>
       </div>
-      <div className="space-y-0 divide-y divide-border rounded-lg border border-border overflow-hidden">
+      <div className="space-y-0 divide-y divide-slate-100 rounded-2xl border border-slate-200 overflow-hidden bg-white">
         {fields.map(({ icon: Icon, label, val }) => (
-          <div key={label} className="flex items-center gap-3 px-4 py-3 bg-surface2">
-            <Icon className="w-3.5 h-3.5 text-muted shrink-0" />
-            <span className="text-xs text-muted w-20 shrink-0">{label}</span>
-            <span className="text-sm font-mono text-white truncate">{val}</span>
+          <div key={label} className="flex items-center gap-3 px-4 py-3 bg-slate-50/70">
+            <Icon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="text-xs text-slate-500 w-20 shrink-0 font-medium">{label}</span>
+            <span className="text-sm font-mono text-slate-900 truncate">{val}</span>
           </div>
         ))}
       </div>
@@ -131,13 +400,47 @@ function TenantDetailModal({ open, onClose, tenant }) {
 
 // ── USER MANAGEMENT MODAL ─────────────────────────────────
 function UserManagementModal({ open, onClose, tenant, toast }) {
-  const [users, setUsers]     = useState([])
+  const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
-  const [editUser, setEdit]   = useState(null)
+  const [editUser, setEdit] = useState(null)
   const [confirm, setConfirm] = useState(null)
-  const [form, setForm]       = useState({ first_name:'', last_name:'', email:'', phone:'', password:'' })
-  const [saving, setSaving]   = useState(false)
+  const [form, setForm] = useState({
+
+    // tenant
+    name: '',
+    email: '',
+    phone: '',
+    plan_id: '',
+    app: '',
+    first_name: '',
+    last_name: '',
+    password: '',
+
+    // database
+    db_name: '',
+    db_username: '',
+    db_password: '',
+
+    // company
+    company_name: '',
+    company_address: '',
+    zip_code: '',
+    company_email: '',
+    company_phone: '',
+    website: '',
+    company_type: '',
+    pdf_file_name_format: '',
+    gst_number: '',
+
+    // bank
+    bank_name: '',
+    account_number: '',
+    ifsc_code: '',
+    account_holder_name: '',
+    swift_code: '',
+  })
+  const [saving, setSaving] = useState(false)
 
   const loadUsers = useCallback(() => {
     if (!tenant) return
@@ -148,19 +451,58 @@ function UserManagementModal({ open, onClose, tenant, toast }) {
       .finally(() => setLoading(false))
   }, [tenant])
 
-  useEffect(() => { if (open) loadUsers() }, [open, loadUsers])
+  useEffect(() => {
+    if (open) {
+      loadUsers();
+    }
+  }, [open, loadUsers])
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
 
   const openEdit = (u) => {
     setEdit(u)
-    setForm({ first_name: u.first_name, last_name: u.last_name, email: u.email, phone: u.phone || '', password: '' })
+    setForm({
+      first_name: u.first_name, last_name: u.last_name, email: u.email,
+      phone: u.phone || '', app: u.app || '', password: ''
+    })
     setShowAdd(true)
   }
 
   const openAdd = () => {
     setEdit(null)
-    setForm({ first_name:'', last_name:'', email:'', phone:'', password:'' })
+    setForm({
+      name: '',
+      email: '',
+      phone: '',
+      plan_id: '',
+      first_name: '',
+      app: '',
+      last_name: '',
+      password: '',
+
+      // database
+      db_name: '',
+      db_username: '',
+      db_password: '',
+
+      // company
+      company_name: '',
+      company_address: '',
+      zip_code: '',
+      company_email: '',
+      company_phone: '',
+      website: '',
+      company_type: '',
+      pdf_file_name_format: '',
+      gst_number: '',
+
+      // bank
+      bank_name: '',
+      account_number: '',
+      ifsc_code: '',
+      account_holder_name: '',
+      swift_code: '',
+    })
     setShowAdd(true)
   }
 
@@ -202,7 +544,7 @@ function UserManagementModal({ open, onClose, tenant, toast }) {
           <h3 className="font-semibold text-base mb-4">{editUser ? 'Edit User' : 'Add New User'}</h3>
           <div className="grid grid-cols-2 gap-3">
             <Input label="First Name" value={form.first_name} onChange={set('first_name')} required />
-            <Input label="Last Name"  value={form.last_name}  onChange={set('last_name')}  />
+            <Input label="Last Name" value={form.last_name} onChange={set('last_name')} />
           </div>
           <Input label="Email" type="email" value={form.email} onChange={set('email')} required />
           <Input label="Phone" value={form.phone} onChange={set('phone')} />
@@ -222,25 +564,25 @@ function UserManagementModal({ open, onClose, tenant, toast }) {
           </div>
 
           {loading ? (
-            <div className="space-y-2">{Array(3).fill(0).map((_,i) => <Skeleton key={i} className="h-14" />)}</div>
+            <div className="space-y-2">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
           ) : users.length === 0 ? (
             <EmptyState icon="👤" title="No users yet" desc="Add the first user for this tenant" />
           ) : (
-            <div className="border border-border rounded-xl overflow-hidden">
+            <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-surface2 border-b border-border">
+                  <tr className="bg-slate-50 border-b border-slate-200">
                     {['Name', 'Email', 'Phone', 'Role', 'Actions'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-muted uppercase tracking-wider">{h}</th>
+                      <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em]">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {users.map(u => (
-                    <tr key={u.id} className="border-b border-border/50 hover:bg-surface2/40 transition-colors">
+                    <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-all">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-accent/20 text-accent flex items-center justify-center text-xs font-bold font-display">
+                          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">
                             {u.first_name?.charAt(0)}
                           </div>
                           <span className="text-sm font-semibold">{u.first_name} {u.last_name}</span>
@@ -249,7 +591,7 @@ function UserManagementModal({ open, onClose, tenant, toast }) {
                       <td className="px-4 py-3 text-sm text-muted">{u.email}</td>
                       <td className="px-4 py-3 text-sm text-muted">{u.phone || '—'}</td>
                       <td className="px-4 py-3">
-                        <span className="text-xs bg-surface2 text-muted px-2 py-0.5 rounded-full font-mono">
+                        <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
                           {u.role || 'user'}
                         </span>
                       </td>
@@ -287,15 +629,15 @@ function UserManagementModal({ open, onClose, tenant, toast }) {
 
 // ── MAIN TENANTS PAGE ─────────────────────────────────────
 export default function TenantsPage() {
-  const [tenants, setTenants]   = useState([])
-  const [plans,   setPlans]     = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [search,  setSearch]    = useState('')
-  const [filter,  setFilter]    = useState('all')
-  const [showAdd, setShowAdd]   = useState(false)
-  const [detail,  setDetail]    = useState(null)
-  const [users,   setUsers]     = useState(null)
-  const [confirm, setConfirm]   = useState(null)
+  const [tenants, setTenants] = useState([])
+  const [plans, setPlans] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [showAdd, setShowAdd] = useState(false)
+  const [detail, setDetail] = useState(null)
+  const [users, setUsers] = useState(null)
+  const [confirm, setConfirm] = useState(null)
   const { toasts, toast, dismiss } = useToast()
 
   const load = useCallback(() => {
@@ -305,7 +647,10 @@ export default function TenantsPage() {
         setTenants(td.data.tenants || [])
         setPlans(pd.data.plans || [])
       })
-      .catch(() => toast({ title: 'Failed to load', variant: 'destructive' }))
+      .catch((err) => {
+        console.error('Failed to load tenants or plans', err);
+        toast({ title: 'Failed to load', variant: 'destructive' });
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -313,7 +658,7 @@ export default function TenantsPage() {
 
   const filtered = tenants.filter(t => {
     const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) ||
-                        t.email.toLowerCase().includes(search.toLowerCase())
+      t.email.toLowerCase().includes(search.toLowerCase())
     const matchFilter = filter === 'all' || t.status === filter
     return matchSearch && matchFilter
   })
@@ -348,15 +693,15 @@ export default function TenantsPage() {
   const filters = ['all', 'active', 'trial', 'suspended', 'cancelled']
 
   return (
-    <div className="animate-fadeIn">
+    <div className="animate-fadeIn space-y-6">
       {/* HEADER */}
-      <div className="flex items-start justify-between mb-7">
+      <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 className="font-display font-extrabold text-3xl tracking-tight">Tenants</h1>
-          <p className="text-muted text-sm mt-1">{tenants.length} businesses on your platform</p>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">Tenants</h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">{tenants.length} businesses on your platform</p>
         </div>
         <div className="flex gap-3">
-          <button onClick={load} className="p-2.5 rounded-lg bg-surface2 border border-border text-muted hover:text-white transition-colors">
+          <button onClick={load} className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-all">
             <RefreshCw className="w-4 h-4" />
           </button>
           <Button onClick={() => setShowAdd(true)}>
@@ -368,10 +713,9 @@ export default function TenantsPage() {
       {/* FILTERS + SEARCH */}
       <div className="flex items-center gap-4 mb-5">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            className="input-base pl-9 w-56"
-            placeholder="Search tenants..."
+            className="w-64 h-11 pl-10 pr-4 rounded-xl bg-white border border-slate-200 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all" placeholder="Search tenants..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -383,8 +727,8 @@ export default function TenantsPage() {
               className={cn(
                 'px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all',
                 filter === f
-                  ? 'bg-accent text-white'
-                  : 'bg-surface2 text-muted hover:text-white border border-border'
+                  ? 'bg-blue-500 text-white shadow-sm shadow-blue-200/50'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               )}>
               {f}
             </button>
@@ -393,64 +737,69 @@ export default function TenantsPage() {
       </div>
 
       {/* TABLE */}
-      <Card>
+      <Card className="overflow-hidden border border-slate-200/70 bg-white/90 backdrop-blur-xl shadow-sm rounded-2xl">
         {loading ? (
-          <div className="p-5 space-y-3">{Array(5).fill(0).map((_,i) => <Skeleton key={i} className="h-14" />)}</div>
+          <div className="p-5 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
         ) : filtered.length === 0 ? (
           <EmptyState icon="🏢" title="No tenants found" desc="Try adjusting your search or filters" />
         ) : (
-          <table className="w-full">
+          <table className="w-full border-separate border-spacing-0">
             <thead>
-              <tr className="border-b border-border">
-                {['Business', 'Plan', 'Status', 'Trial Ends', 'Database', 'Actions'].map(h => (
-                  <th key={h} className="px-5 py-3.5 text-left text-[11px] font-bold text-muted uppercase tracking-wider bg-surface2">{h}</th>
+              <tr className="border-b border-slate-200">
+                {['Business', 'Plan', 'App', 'Status', 'Trial Ends', 'Database', 'Actions'].map(h => (
+                  <th key={h} className="px-5 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] bg-slate-50 border-b border-slate-200">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.map(t => (
-                <tr key={t.id} className="border-b border-border/50 hover:bg-surface2/30 transition-colors">
+                <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-all">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center font-display font-bold text-sm shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
                         {t.name?.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-semibold text-sm">{t.name}</p>
-                        <p className="text-xs text-muted">{t.email}</p>
+                        <p className="font-bold text-sm text-slate-900">{t.name}</p>
+                        <p className="text-xs text-slate-500">{t.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <span className="text-xs bg-accent/15 text-accent px-2.5 py-0.5 rounded-full font-semibold">
+                    <span className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-semibold">
                       {t.plan?.name || '—'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                      {t?.app?.code || '—'}
                     </span>
                   </td>
                   <td className="px-5 py-4">
                     <Badge status={t.status}>{t.status}</Badge>
                   </td>
-                  <td className="px-5 py-4 text-sm text-muted">{formatDate(t.trial_ends_at)}</td>
+                  <td className="px-5 py-4 text-sm text-slate-500 font-medium">{formatDate(t.trial_ends_at)}</td>
                   <td className="px-5 py-4">
-                    <code className="text-[11px] bg-surface2 text-muted px-2 py-0.5 rounded font-mono">{t.db_name}</code>
+                    <code className="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-mono">{t.db_name}</code>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex gap-2">
                       <Button size="sm" variant="ghost" onClick={() => setDetail(t)}>
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => setUsers(t)}>
+                      {/* <Button size="sm" variant="outline" onClick={() => setUsers(t)}>
                         <Users className="w-3.5 h-3.5" /> Users
-                      </Button>
+                      </Button> */}
                       {t.status !== 'suspended' ? (
-                        <Button size="sm" variant="danger" onClick={() => setConfirm({ action:'suspend', tenant:t })}>
+                        <Button size="sm" variant="danger" onClick={() => setConfirm({ action: 'suspend', tenant: t })}>
                           <ShieldOff className="w-3.5 h-3.5" />
                         </Button>
                       ) : (
-                        <Button size="sm" variant="success" onClick={() => setConfirm({ action:'activate', tenant:t })}>
+                        <Button size="sm" variant="success" onClick={() => setConfirm({ action: 'activate', tenant: t })}>
                           <ShieldCheck className="w-3.5 h-3.5" />
                         </Button>
                       )}
-                      <Button size="sm" variant="danger" onClick={() => setConfirm({ action:'delete', tenant:t })}>
+                      <Button size="sm" variant="danger" onClick={() => setConfirm({ action: 'delete', tenant: t })}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -463,7 +812,7 @@ export default function TenantsPage() {
       </Card>
 
       {/* MODALS */}
-      <AddTenantModal open={showAdd} onClose={() => setShowAdd(false)}
+      <AddTenantModal className="w-full" open={showAdd} onClose={() => setShowAdd(false)}
         plans={plans} toast={toast}
         onSuccess={() => { setShowAdd(false); load() }} />
 
@@ -477,20 +826,20 @@ export default function TenantsPage() {
           open={!!confirm}
           onClose={() => setConfirm(null)}
           onConfirm={() => {
-            if (confirm.action === 'suspend')  doSuspend(confirm.tenant)
+            if (confirm.action === 'suspend') doSuspend(confirm.tenant)
             if (confirm.action === 'activate') doActivate(confirm.tenant)
-            if (confirm.action === 'delete')   doDelete(confirm.tenant)
+            if (confirm.action === 'delete') doDelete(confirm.tenant)
           }}
           title={
-            confirm.action === 'delete'   ? 'Delete Tenant' :
-            confirm.action === 'suspend'  ? 'Suspend Tenant' : 'Activate Tenant'
+            confirm.action === 'delete' ? 'Delete Tenant' :
+              confirm.action === 'suspend' ? 'Suspend Tenant' : 'Activate Tenant'
           }
           message={
             confirm.action === 'delete'
               ? `Permanently delete "${confirm.tenant.name}" and their entire database? This CANNOT be undone.`
               : confirm.action === 'suspend'
-              ? `Suspend "${confirm.tenant.name}"? They will lose access immediately.`
-              : `Activate "${confirm.tenant.name}"? They will regain full access.`
+                ? `Suspend "${confirm.tenant.name}"? They will lose access immediately.`
+                : `Activate "${confirm.tenant.name}"? They will regain full access.`
           }
           variant={confirm.action === 'activate' ? 'success' : 'danger'}
         />

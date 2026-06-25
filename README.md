@@ -1,4 +1,4 @@
-# Decolivings — Super Admin Portal
+# Flairm — Super Admin Portal
 
 React + Tailwind CSS + shadcn-style UI
 
@@ -33,13 +33,7 @@ export const API_URL = 'https://crmapp.flairm.com/api'
 npm run build
 # Output in /dist folder — upload to server
 ```
-
-## 🔑 Login
-
-Use your Super Admin credentials:
-- Email: admin@decolivings.com
-- Password: Admin@123
-
+ 
 ## 📋 Features
 
 ### Dashboard
