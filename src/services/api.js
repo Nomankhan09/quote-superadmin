@@ -1,7 +1,7 @@
 import axios from 'axios'
 
-export const API_URL = 'http://localhost:8000/api'
-// export const API_URL = 'https://crmapp.flairm.com/quotepro/public/api'
+export const API_URL = 'https://accounts.flairm.com/accounts/public/api'
+// export const API_URL = 'https://accounts.flairm.com/accounts/public/api'
 
 const api = axios.create({
   baseURL: API_URL,
