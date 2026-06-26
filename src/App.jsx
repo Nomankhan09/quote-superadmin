@@ -8,6 +8,7 @@ import PlansPage from '@/components/pages/PlansPage'
 import AppsPage from '@/components/pages/AppPage'
 import UserPage from './components/pages/UserPage'
 import AccessRequestsPage from './components/pages/AccessRequests'
+import VerifyOtpPage from './components/pages/VerifyOtpPage'
 
 function ProtectedRoute({ children }) {
   const { isAuth } = useAuth()
@@ -19,6 +20,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={isAuth ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/verify-otp" element={<VerifyOtpPage />} />
       <Route path="/*" element={
         <ProtectedRoute>
           <Layout>

@@ -24,8 +24,17 @@ export default function LoginPage() {
 
     try {
       const { data } = await superAdminLogin(form)
-      login(data.token, data.admin)
-      navigate('/')
+      if (data.two_factor_enable) {
+        navigate("/verify-otp", {
+          state: {
+            adminId: data.admin_id,
+            email: data.email,
+          },
+        });
+      } else {
+        login(data.token, data.admin);
+        navigate("/", { replace: true });
+      }
     } catch (err) {
       console.log('Full Error:', err);
       console.log('Response:', err.response);

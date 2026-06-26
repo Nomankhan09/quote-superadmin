@@ -2,6 +2,7 @@ import axios from 'axios'
 
 export const API_URL = 'https://accounts.flairm.com/accounts/public/api'
 // export const API_URL = 'https://accounts.flairm.com/accounts/public/api'
+// export const API_URL = 'http://127.0.0.1:8000/api'
 
 const api = axios.create({
   baseURL: API_URL,
@@ -32,6 +33,7 @@ api.interceptors.response.use(
 
 // ── SUPER ADMIN AUTH ──────────────────────────────────────
 export const superAdminLogin = (data) => api.post('/superadmin/login', data)
+export const verifySuperAdminOtp = (data) => api.post("/superadmin/verify-otp", data);
 export const superAdminMe = () => api.get('/superadmin/me')
 
 // ── TENANTS ───────────────────────────────────────────────
