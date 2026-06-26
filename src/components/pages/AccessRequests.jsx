@@ -42,7 +42,6 @@ export default function AccessRequestsPage() {
             </div>
 
             <Card className="rounded-2xl border overflow-hidden">
-
                 {loading ? (
                     <div className="p-5 space-y-3">
                         {Array(5).fill(0).map((_, i) => (
@@ -56,54 +55,88 @@ export default function AccessRequestsPage() {
                         desc="Users have not requested access yet"
                     />
                 ) : (
-                    <table className="w-full">
-                        <thead className="bg-slate-50 border-b">
-                            <tr className="border-b border-slate-200">
-                                <th className="text-left p-4">User</th>
-                                <th className="text-left p-4">Email</th>
-                                <th className="text-left p-4">App</th>
-                                <th className="text-left p-4">Message</th>
-                                <th className="text-left p-4">Date</th>
-                            </tr>
-                        </thead>
+                    <>
+                        {/* ── Desktop table (md+) ── */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-slate-50 border-b">
+                                    <tr className="border-b border-slate-200">
+                                        <th className="text-left p-4 text-sm font-semibold text-slate-600">User</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-slate-600">Email</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-slate-600">App</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-slate-600">Message</th>
+                                        <th className="text-left p-4 text-sm font-semibold text-slate-600">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.map((item) => (
+                                        <tr
+                                            key={item.id}
+                                            className="border-b border-slate-100 hover:bg-slate-50/80 transition-all"
+                                        >
+                                            <td className="p-4 font-medium">
+                                                {item.user?.first_name || "Guest"}
+                                            </td>
+                                            <td className="p-4 text-slate-500">
+                                                {item.meta?.email || item.user?.email}
+                                            </td>
+                                            <td className="p-4">
+                                                {item.app?.name ? (
+                                                    <Badge>{item.app.name}</Badge>
+                                                ) : (
+                                                    <span className="text-slate-400">—</span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 text-sm text-slate-600">
+                                                {item.meta?.message || "—"}
+                                            </td>
+                                            <td className="p-4 text-sm text-slate-500">
+                                                {new Date(item.created_at).toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
 
-                        <tbody>
+                        {/* ── Mobile card list (< md) ── */}
+                        <div className="md:hidden divide-y divide-slate-100">
                             {data.map((item) => (
-                                <tr key={item.id}
-                                    className="    border-b    border-slate-100    hover:bg-slate-50/80    transition-all"
+                                <div
+                                    key={item.id}
+                                    className="p-4 space-y-3 hover:bg-slate-50/80 transition-all"
                                 >
-                                    <td className="p-4 font-medium">
-                                        {item.user?.first_name || "Guest"}
-                                    </td>
+                                    {/* Row 1: name + app badge */}
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="font-semibold text-slate-900">
+                                            {item.user?.first_name || "Guest"}
+                                        </span>
+                                        {item.app?.name ? (
+                                            <Badge>{item.app.name}</Badge>
+                                        ) : null}
+                                    </div>
 
-                                    <td className="p-4 text-slate-500">
+                                    {/* Row 2: email */}
+                                    <div className="text-sm text-slate-500 truncate">
                                         {item.meta?.email || item.user?.email}
-                                    </td>
+                                    </div>
 
-                                    <td className="p-4">
-                                        {item.app?.name ?
-                                            <Badge>
-                                                {item.app?.name || ``}
-                                            </Badge> :
-                                            <div className="text-slate-600">
-                                                -
-                                            </div>
-                                        }
-                                    </td>
+                                    {/* Row 3: message (only if present) */}
+                                    {item.meta?.message && (
+                                        <p className="text-sm text-slate-600 leading-relaxed">
+                                            {item.meta.message}
+                                        </p>
+                                    )}
 
-                                    <td className="p-4 text-sm text-slate-600">
-                                        {item.meta?.message || "-"}
-                                    </td>
-
-                                    <td className="p-4 text-sm text-slate-500">
+                                    {/* Row 4: date, right-aligned */}
+                                    <div className="text-xs text-slate-400 text-right">
                                         {new Date(item.created_at).toLocaleString()}
-                                    </td>
-                                </tr>
+                                    </div>
+                                </div>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+                    </>
                 )}
-
             </Card>
         </div>
     );

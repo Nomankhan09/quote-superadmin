@@ -93,7 +93,7 @@ export default function LoginPage() {
             "
           >
             <img
-              src="/src/public/images/flairm-crm-logo.png"
+              src="/images/flairm-crm-logo.png"
               alt="Flairm"
               className="w-10 h-10 object-contain"
             />

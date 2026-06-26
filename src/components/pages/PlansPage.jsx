@@ -108,9 +108,9 @@ export default function PlansPage() {
 
   return (
     <div className="animate-fadeIn">
-      <div className="flex items-start justify-between mb-7">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-7">
         <div>
-          <h1 className=" font-extrabold text-4xl tracking-tight">Plans</h1>
+          <h1 className="font-extrabold text-4xl tracking-tight">Plans</h1>
           <p className="text-muted text-sm mt-1">Manage subscription tiers for your tenants</p>
         </div>
         <Button onClick={() => setShowAdd(true)}>
@@ -119,13 +119,13 @@ export default function PlansPage() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-64" />)}
         </div>
       ) : plans.length === 0 ? (
         <Card><CardBody><EmptyState icon="📦" title="No plans yet" desc="Create your first pricing plan" /></CardBody></Card>
       ) : (
-        <div className="grid grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {plans.map((p, i) => (
             <div key={p.id} className={`relative rounded-xl border bg-gradient-to-br p-6 ${colors[i % colors.length]}`}>
               <div className={`absolute top-0 left-0 right-0 h-0.5 rounded-t-xl ${topColors[i % topColors.length]}`} />

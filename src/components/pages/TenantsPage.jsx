@@ -238,7 +238,7 @@ function AddTenantModal({ open, onClose, plans, onSuccess, toast }) {
         </div>
 
         <div>
-          
+
         </div>
 
         {/* DATABASE DETAILS */}
@@ -695,7 +695,7 @@ export default function TenantsPage() {
   return (
     <div className="animate-fadeIn space-y-6">
       {/* HEADER */}
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-8">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900">Tenants</h1>
           <p className="text-slate-500 text-sm mt-1 font-medium">{tenants.length} businesses on your platform</p>
@@ -711,16 +711,17 @@ export default function TenantsPage() {
       </div>
 
       {/* FILTERS + SEARCH */}
-      <div className="flex items-center gap-4 mb-5">
-        <div className="relative">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center mb-5">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            className="w-64 h-11 pl-10 pr-4 rounded-xl bg-white border border-slate-200 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all" placeholder="Search tenants..."
+            className="w-full h-11 pl-10 pr-4 rounded-xl bg-white border border-slate-200 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
+            placeholder="Search tenants..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {filters.map(f => (
             <button key={f}
               onClick={() => setFilter(f)}
@@ -743,53 +744,112 @@ export default function TenantsPage() {
         ) : filtered.length === 0 ? (
           <EmptyState icon="🏢" title="No tenants found" desc="Try adjusting your search or filters" />
         ) : (
-          <table className="w-full border-separate border-spacing-0">
-            <thead>
-              <tr className="border-b border-slate-200">
-                {['Business', 'Plan', 'App', 'Status', 'Trial Ends', 'Database', 'Actions'].map(h => (
-                  <th key={h} className="px-5 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] bg-slate-50 border-b border-slate-200">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* ── Desktop table (lg+) ── */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full border-separate border-spacing-0">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    {['Business', 'Plan', 'App', 'Status', 'Trial Ends', 'Database', 'Actions'].map(h => (
+                      <th key={h} className="px-5 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] bg-slate-50 border-b border-slate-200">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(t => (
+                    <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-all">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
+                            {t.name?.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-slate-900">{t.name}</p>
+                            <p className="text-xs text-slate-500">{t.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-semibold">
+                          {t.plan?.name || '—'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                          {t?.app?.code || '—'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <Badge status={t.status}>{t.status}</Badge>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-slate-500 font-medium">{formatDate(t.trial_ends_at)}</td>
+                      <td className="px-5 py-4">
+                        <code className="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-mono">{t.db_name}</code>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => setDetail(t)}>
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
+                          {t.status !== 'suspended' ? (
+                            <Button size="sm" variant="danger" onClick={() => setConfirm({ action: 'suspend', tenant: t })}>
+                              <ShieldOff className="w-3.5 h-3.5" />
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="success" onClick={() => setConfirm({ action: 'activate', tenant: t })}>
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          <Button size="sm" variant="danger" onClick={() => setConfirm({ action: 'delete', tenant: t })}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Mobile cards (< lg) ── */}
+            <div className="lg:hidden divide-y divide-slate-100">
               {filtered.map(t => (
-                <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-all">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
+                <div key={t.id} className="p-4 space-y-3 hover:bg-slate-50/80 transition-all">
+
+                  {/* Row 1: avatar + name/email + status */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
                         {t.name?.charAt(0)}
                       </div>
-                      <div>
-                        <p className="font-bold text-sm text-slate-900">{t.name}</p>
-                        <p className="text-xs text-slate-500">{t.email}</p>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-slate-900 truncate">{t.name}</p>
+                        <p className="text-xs text-slate-500 truncate">{t.email}</p>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-semibold">
+                    <Badge status={t.status}>{t.status}</Badge>
+                  </div>
+
+                  {/* Row 2: plan + app + trial */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-semibold">
                       {t.plan?.name || '—'}
                     </span>
-                  </td>
-                  <td>
-                    <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                    <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
                       {t?.app?.code || '—'}
                     </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <Badge status={t.status}>{t.status}</Badge>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-slate-500 font-medium">{formatDate(t.trial_ends_at)}</td>
-                  <td className="px-5 py-4">
-                    <code className="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-mono">{t.db_name}</code>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex gap-2">
+                    <span className="text-slate-400">Trial ends {formatDate(t.trial_ends_at)}</span>
+                  </div>
+
+                  {/* Row 3: db name + actions */}
+                  <div className="flex items-center justify-between gap-2">
+                    <code className="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-mono truncate max-w-[50%]">
+                      {t.db_name}
+                    </code>
+                    <div className="flex gap-2 shrink-0">
                       <Button size="sm" variant="ghost" onClick={() => setDetail(t)}>
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
-                      {/* <Button size="sm" variant="outline" onClick={() => setUsers(t)}>
-                        <Users className="w-3.5 h-3.5" /> Users
-                      </Button> */}
                       {t.status !== 'suspended' ? (
                         <Button size="sm" variant="danger" onClick={() => setConfirm({ action: 'suspend', tenant: t })}>
                           <ShieldOff className="w-3.5 h-3.5" />
@@ -803,11 +863,12 @@ export default function TenantsPage() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </Card>
 

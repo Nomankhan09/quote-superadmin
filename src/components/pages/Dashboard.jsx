@@ -38,13 +38,15 @@ export default function Dashboard() {
   return (
     <div className="animate-fadeIn space-y-6">
       {/* HEADER */}
-      <div className="flex items-end justify-between">
-        <h1 className="text-3xl font-black tracking-tight text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 text-sm mt-1 font-medium">Platform overview — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1">
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Dashboard</h1>
+        <p className="text-slate-500 text-sm font-medium">
+          Platform overview — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </p>
       </div>
 
       {/* STAT CARDS */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {loading ? (
           Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-32" />)
         ) : (
@@ -58,10 +60,10 @@ export default function Dashboard() {
       </div>
 
       {/* CHARTS + RECENT */}
-      <div className="grid grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
         {/* BAR CHART */}
-        <Card className="col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Tenants by Plan</CardTitle>
           </CardHeader>
@@ -81,17 +83,13 @@ export default function Dashboard() {
                         borderRadius: 12,
                         color: '#0F172A',
                         fontSize: 12,
-                        boxShadow:
-                          '0 10px 30px rgba(15,23,42,0.08)',
-                      }} cursor={{ fill: 'rgba(124,106,247,0.08)' }}
+                        boxShadow: '0 10px 30px rgba(15,23,42,0.08)',
+                      }}
+                      cursor={{ fill: 'rgba(124,106,247,0.08)' }}
                     />
                     <Bar dataKey="tenants" radius={[6, 6, 0, 0]}>
                       {chartData.map((_, i) => (
-                        <Cell key={i} fill={
-                          i % 2 === 0
-                            ? '#3B82F6'
-                            : '#8B5CF6'
-                        } />
+                        <Cell key={i} fill={i % 2 === 0 ? '#3B82F6' : '#8B5CF6'} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -102,7 +100,7 @@ export default function Dashboard() {
         </Card>
 
         {/* STATUS BREAKDOWN */}
-        <Card className="col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Status Breakdown</CardTitle>
           </CardHeader>
@@ -116,7 +114,9 @@ export default function Dashboard() {
                 <div key={row.label}>
                   <div className="flex justify-between text-xs mb-1.5">
                     <span className="text-slate-500 font-medium">{row.label}</span>
-                    <span className="font-bold">{stats.total > 0 ? Math.round((row.val / stats.total) * 100) : 0}%</span>
+                    <span className="font-bold">
+                      {stats.total > 0 ? Math.round((row.val / stats.total) * 100) : 0}%
+                    </span>
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
@@ -131,7 +131,7 @@ export default function Dashboard() {
         </Card>
 
         {/* RECENT TENANTS */}
-        <Card className="col-span-5">
+        <Card className="lg:col-span-5">
           <CardHeader>
             <CardTitle>Recent Tenants</CardTitle>
             <button
@@ -141,6 +141,7 @@ export default function Dashboard() {
               View all <ArrowRight className="w-3 h-3" />
             </button>
           </CardHeader>
+
           <div>
             {loading ? (
               <div className="p-5 space-y-3">
@@ -149,33 +150,71 @@ export default function Dashboard() {
             ) : recent.length === 0 ? (
               <div className="py-12 text-center text-slate-500 text-sm">No tenants yet</div>
             ) : (
-              <table className="w-full border-separate border-spacing-0">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    {['Business', 'Email', 'Plan', 'Status', 'Joined'].map(h => (
-                      <th key={h} className="px-5 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* Desktop table (md+) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full border-separate border-spacing-0">
+                    <thead>
+                      <tr className="border-b border-slate-200">
+                        {['Business', 'Email', 'Plan', 'Status', 'Joined'].map(h => (
+                          <th key={h} className="px-5 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recent.map(t => (
+                        <tr
+                          key={t.id}
+                          className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors cursor-pointer"
+                          onClick={() => navigate('/tenants')}
+                        >
+                          <td className="px-5 py-3.5 font-semibold text-sm">{t.name}</td>
+                          <td className="px-5 py-3.5 text-sm text-slate-500">{t.email}</td>
+                          <td className="px-5 py-3.5">
+                            <span className="text-xs bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full font-semibold">
+                              {t.plan?.name || '—'}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <Badge status={t.status}>{t.status}</Badge>
+                          </td>
+                          <td className="px-5 py-3.5 text-sm text-slate-500">{formatDate(t.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile card list (< md) */}
+                <div className="md:hidden divide-y divide-slate-100">
                   {recent.map(t => (
-                    <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors cursor-pointer"
-                      onClick={() => navigate('/tenants')}>
-                      <td className="px-5 py-3.5 font-semibold text-sm">{t.name}</td>
-                      <td className="px-5 py-3.5 text-sm text-slate-500">{t.email}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="text-xs bg-blue-50 text-blue-600 px-2.5 py-0.5 rounded-full font-semibold">
+                    <div
+                      key={t.id}
+                      className="px-4 py-3.5 flex items-center gap-3 hover:bg-slate-50/80 transition-colors cursor-pointer"
+                      onClick={() => navigate('/tenants')}
+                    >
+                      {/* Avatar initial */}
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                        {t.name?.charAt(0)?.toUpperCase()}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{t.name}</p>
+                        <p className="text-xs text-slate-500 truncate">{t.email}</p>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <Badge status={t.status}>{t.status}</Badge>
+                        <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-semibold">
                           {t.plan?.name || '—'}
                         </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <Badge status={t.status}>{t.status}</Badge>
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-500">{formatDate(t.created_at)}</td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         </Card>
